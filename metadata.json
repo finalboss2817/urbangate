@@ -1,0 +1,7 @@
+{
+  "name": "UrbanGate - Building Management System",
+  "description": "A comprehensive building management system featuring visitor tracking, amenity booking, and notice management with specialized views for super admins, building admins, residents, and security personnel.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
