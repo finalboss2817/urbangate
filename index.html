@@ -9,8 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Inter', sans-serif; }
-      /* Hide root until React takes over to prevent FOUC or partial renders */
       #root:empty { display: none; }
+      
+      /* Smooth transitions for notifications */
+      .notification-bounce {
+        animation: bounce 0.5s ease;
+      }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
     </style>
     <script type="importmap">
 {
@@ -27,7 +35,47 @@
   </head>
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <!-- Explicitly import index.tsx to ensure the module loader starts -->
     <script type="module" src="index.tsx"></script>
+    <script>
+      // Service Worker Registration for Push Notifications
+      // We use manual string building to bypass <base> tags and avoid buggy URL constructor 
+      // implementations in certain sandboxed environments.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          try {
+            const loc = window.location;
+            
+            // Service workers require a secure context and a valid web protocol.
+            // Some sandboxed environments might present as 'about:srcdoc' or have 'null' origins.
+            if (loc.protocol === 'http:' || loc.protocol === 'https:') {
+              const origin = loc.origin;
+              const pathname = loc.pathname || '/';
+              // Extract directory path: everything before the last slash
+              const dir = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+              // Construct an absolute URL to the SW file to ensure it matches the frame origin
+              const swUrl = origin + dir + 'sw.js';
+              
+              console.log('Initializing UrbanGate Security Node:', swUrl);
+              
+              navigator.serviceWorker.register(swUrl)
+                .then(reg => {
+                  console.log('Security Node Active:', reg.scope);
+                })
+                .catch(err => {
+                  console.warn('Primary SW registration failed, attempting relative fallback...', err);
+                  // Last ditch effort: simple relative path registration
+                  navigator.serviceWorker.register('sw.js').catch(e => {
+                    console.error('All SW registration strategies failed:', e);
+                  });
+                });
+            } else {
+              console.warn('Service Worker registration skipped: Invalid protocol (' + loc.protocol + ')');
+            }
+          } catch (e) {
+            console.error('Critical error during Service Worker setup:', e);
+          }
+        });
+      }
+    </script>
   </body>
 </html>

@@ -11,7 +11,11 @@ export interface Profile {
   role: UserRole;
   building_id?: string;
   full_name?: string;
+  wing?: string;
   flat_number?: string;
+  phone_number?: string;
+  telegram_chat_id?: string;
+  is_verified?: boolean;
 }
 
 export interface Building {
@@ -54,6 +58,15 @@ export interface Notice {
   created_at: string;
 }
 
+export interface Achievement {
+  id: string;
+  building_id: string;
+  title: string;
+  content: string;
+  image_url?: string;
+  created_at: string;
+}
+
 export interface Visitor {
   id: string;
   building_id: string;
@@ -62,8 +75,20 @@ export interface Visitor {
   purpose: string;
   flat_number: string;
   type: 'PRE_APPROVED' | 'WALK_IN';
-  status: 'PENDING' | 'ENTERED' | 'EXITED' | 'REJECTED';
+  status: 'PENDING' | 'WAITING_APPROVAL' | 'ENTERED' | 'EXITED' | 'REJECTED';
   check_in_at?: string;
   check_out_at?: string;
   invite_code?: string;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  building_id: string;
+  profile_id: string;
+  recipient_id?: string;
+  user_name: string;
+  content?: string;
+  image_url?: string;
+  created_at: string;
 }
