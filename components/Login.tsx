@@ -20,7 +20,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(() => {
+    return sessionStorage.getItem('urbangate_auth_error') === 'identity_mismatch';
+  });
 
   const handlePortalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,11 +71,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       if (!authData.user) throw new Error('Terminal authentication failed.');
 
       // 5. CRITICAL IDENTITY LOCK CHECK
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('phone_number, is_verified')
         .eq('id', authData.user.id)
         .maybeSingle();
+
+      if (profileFetchError) throw new Error(`Identity Verification Failed: ${profileFetchError.message}`);
 
       if (role === UserRole.RESIDENT && existingProfile && existingProfile.phone_number) {
         const normalizedInput = phoneNumber.trim();
@@ -81,12 +85,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         if (normalizedStored !== normalizedInput) {
           // SECURITY VIOLATION: Phone Mismatch
+          // We persist the error state in sessionStorage because supabase.auth.signOut() 
+          // will trigger a re-render in App.tsx, which unmounts/remounts this component.
+          sessionStorage.setItem('urbangate_auth_error', 'identity_mismatch');
           await supabase.auth.signOut();
-          setShowSecurityModal(true);
           setLoading(false);
           return;
         }
       }
+
+      // Clear any previous error if check passes
+      sessionStorage.removeItem('urbangate_auth_error');
 
       // 6. Secure Profile Sync
       const { error: profileError } = await supabase.from('profiles').upsert({
@@ -129,6 +138,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     } catch (err: any) { setError('Invalid master credentials.'); } finally { setLoading(false); }
   };
 
+  const closeSecurityModal = () => {
+    sessionStorage.removeItem('urbangate_auth_error');
+    setShowSecurityModal(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 font-inter relative">
       {/* Identity Conflict Modal */}
@@ -143,7 +157,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               To protect the resident, we have blocked this access attempt. Please use the original mobile number registered with this flat.
             </p>
             <button 
-              onClick={() => setShowSecurityModal(false)}
+              onClick={closeSecurityModal}
               className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg hover:bg-slate-800 transition-all"
             >
               Understand & Retry

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UserRole, Profile } from './types';
 import { supabase } from './lib/supabase';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -41,7 +41,7 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,7 +60,7 @@ const App: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4 font-inter">
@@ -82,7 +82,7 @@ const App: React.FC = () => {
   );
 
   if (!session || !profile) {
-    return <Login onLoginSuccess={(userId) => fetchProfile(userId)} />;
+    return <Login onLoginSuccess={fetchProfile} />;
   }
 
   // Verification Gate: Approved residents pass, new ones wait here.
