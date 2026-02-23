@@ -5,79 +5,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UrbanGate - Building Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/index.css">
     <style>
       body { font-family: 'Inter', sans-serif; }
       #root:empty { display: none; }
-      
-      /* Smooth transitions for notifications */
-      .notification-bounce {
-        animation: bounce 0.5s ease;
-      }
-      @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-      }
     </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.47.10",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
-  <link rel="stylesheet" href="/index.css">
-</head>
+  </head>
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
-    <script>
-      // Service Worker Registration for Push Notifications
-      // We use manual string building to bypass <base> tags and avoid buggy URL constructor 
-      // implementations in certain sandboxed environments.
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          try {
-            const loc = window.location;
-            
-            // Service workers require a secure context and a valid web protocol.
-            // Some sandboxed environments might present as 'about:srcdoc' or have 'null' origins.
-            if (loc.protocol === 'http:' || loc.protocol === 'https:') {
-              const origin = loc.origin;
-              const pathname = loc.pathname || '/';
-              // Extract directory path: everything before the last slash
-              const dir = pathname.substring(0, pathname.lastIndexOf('/') + 1);
-              // Construct an absolute URL to the SW file to ensure it matches the frame origin
-              const swUrl = origin + dir + 'sw.js';
-              
-              console.log('Initializing UrbanGate Security Node:', swUrl);
-              
-              navigator.serviceWorker.register(swUrl)
-                .then(reg => {
-                  console.log('Security Node Active:', reg.scope);
-                })
-                .catch(err => {
-                  console.warn('Primary SW registration failed, attempting relative fallback...', err);
-                  // Last ditch effort: simple relative path registration
-                  navigator.serviceWorker.register('sw.js').catch(e => {
-                    console.error('All SW registration strategies failed:', e);
-                  });
-                });
-            } else {
-              console.warn('Service Worker registration skipped: Invalid protocol (' + loc.protocol + ')');
-            }
-          } catch (e) {
-            console.error('Critical error during Service Worker setup:', e);
-          }
-        });
-      }
-    </script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

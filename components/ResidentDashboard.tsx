@@ -142,6 +142,18 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
     finally { setIsSending(false); }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Delete this message?')) return;
+    try {
+      const { error } = await supabase.from('messages').delete().eq('id', messageId).eq('profile_id', profile.id);
+      if (error) throw error;
+      // Local state update for immediate feedback
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    } catch (err: any) {
+      alert('Delete failed: ' + err.message);
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -344,6 +356,15 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
                           )}
                           <div className="relative max-w-[85%] md:max-w-[70%]">
                             <div className={`p-4 rounded-[1.5rem] text-sm font-medium leading-relaxed shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-100' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'}`}>
+                              {isMe && (
+                                <button 
+                                  onClick={() => handleDeleteMessage(m.id)}
+                                  className="absolute -left-8 top-2 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Delete message"
+                                >
+                                  🗑️
+                                </button>
+                              )}
                               {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
                               {m.image_url && (
                                 <img src={m.image_url} alt="Shared content" className="mt-2 rounded-xl max-h-72 w-full object-cover cursor-pointer hover:brightness-105 border border-white/5 shadow-md" onClick={() => window.open(m.image_url)} />
