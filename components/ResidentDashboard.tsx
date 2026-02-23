@@ -79,15 +79,18 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
     
     const channel = supabase
       .channel(`resident_node_${profile.id.slice(0, 5)}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const msg = payload.new as ChatMessage;
-        if (msg.building_id === buildingId) {
-          setMessages(prev => {
-            const exists = prev.some(m => m.id === msg.id);
-            if (exists) return prev;
-            return [...prev, msg];
-          });
-          if (activeTab === 'chat') setTimeout(() => scrollToBottom('smooth'), 100);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const msg = payload.new as ChatMessage;
+          if (msg.building_id === buildingId) {
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === msg.id);
+              if (exists) return prev;
+              return [...prev, msg];
+            });
+          }
+        } else if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+          fetchData(true);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
@@ -98,13 +101,19 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
       });
       
     return () => { supabase.removeChannel(channel); };
-  }, [buildingId, flatNumber, profile.id, activeTab]);
+  }, [buildingId, flatNumber, profile.id]);
+
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setTimeout(() => scrollToBottom('smooth'), 100);
+    }
+  }, [messages.length, activeTab]);
 
   useEffect(() => {
     if (activeTab === 'chat') {
       scrollToBottom('auto');
     }
-  }, [activeTab, activeChat.id]);
+  }, [activeChat.id]);
 
   const filteredMessages = messages.filter(m => {
     if (activeChat.type === 'GROUP') return !m.recipient_id;
@@ -127,6 +136,8 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
         recipient_id: activeChat.type === 'PRIVATE' ? activeChat.id : null
       });
       if (error) throw error;
+      // Immediate local refresh to ensure message appears even if realtime is delayed
+      fetchData(true);
     } catch (err: any) { alert('Failed to send: ' + err.message); setNewMessage(content); } 
     finally { setIsSending(false); }
   };

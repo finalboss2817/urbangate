@@ -73,7 +73,7 @@ CREATE POLICY "achievements_admin_policy" ON achievements FOR ALL USING (
 -- 7. Message Policies (Unified Visibility)
 DROP POLICY IF EXISTS "messages_view_policy" ON messages;
 CREATE POLICY "messages_view_policy" ON messages FOR SELECT USING (
-  (recipient_id IS NULL AND building_id IN (SELECT building_id FROM profiles WHERE id = auth.uid()))
+  (recipient_id IS NULL AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND building_id = messages.building_id))
   OR (recipient_id = auth.uid())
   OR (profile_id = auth.uid())
 );
