@@ -502,7 +502,7 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
                           { step: 1, text: 'Open Telegram and search for @userinfobot' },
                           { step: 2, text: 'Send any message to get your "Id" (Chat ID)' },
                           { step: 3, text: 'Paste that number in the field below' },
-                          { step: 4, text: 'Search for @UrbanGateBot and click "START"' }
+                          { step: 4, text: 'Search for @urbangate2_bot and click "START"' }
                         ].map(item => (
                           <div key={item.step} className="flex gap-4 items-start">
                             <span className="text-[10px] font-black text-slate-300 mt-1">{item.step}.</span>

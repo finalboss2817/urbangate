@@ -141,15 +141,6 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
       }).select().single();
 
       if (error) throw error;
-
-      // Explicitly trigger the Edge Function for Telegram/Push notifications
-      try {
-        await supabase.functions.invoke('send-push', {
-          body: { record: visitorData }
-        });
-      } catch (fnErr) {
-        console.warn('Edge function trigger failed, relying on DB trigger:', fnErr);
-      }
       
       showFeedback('info', `PINGING TELEGRAM FOR UNIT ${requestForm.flatNumber}`);
       setRequestForm({ name: '', phone: '', wing: '', flatNumber: '', purpose: '' });
