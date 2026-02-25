@@ -157,19 +157,26 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
   };
 
   return (
-    <div className="bg-[#0b0f19] min-h-screen text-slate-100 font-inter antialiased">
-      <header className="bg-indigo-600 px-8 py-6 flex justify-between items-center shadow-2xl border-b border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">🛡️</div>
+    <div className="bg-slate-50 min-h-screen font-sans antialiased animate-fade-in">
+      <header className="bg-slate-900 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-center shadow-2xl sticky top-0 z-50">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl backdrop-blur-sm border border-white/10">🛡️</div>
           <div>
-            <h1 className="text-xl font-black tracking-tight uppercase leading-none">Security Core</h1>
-            <p className="text-[9px] text-white/60 font-black tracking-widest uppercase mt-1">Terminal Active</p>
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-white uppercase leading-none">Security Core</h1>
+            <p className="text-[8px] sm:text-[9px] text-white/40 font-black tracking-widest uppercase mt-1 sm:mt-1.5 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              Terminal Active
+            </p>
           </div>
         </div>
-        <button onClick={onLogout} className="px-4 py-2 bg-black/20 hover:bg-black/40 text-[9px] font-black uppercase tracking-widest rounded-lg border border-white/5 transition-all">Logout</button>
+        <button onClick={onLogout} className="btn-danger py-2 px-4 sm:py-3 sm:px-6">
+          <span className="hidden sm:inline">Sign Out</span>
+          <span className="sm:hidden">Exit</span>
+          <span className="text-lg">→</span>
+        </button>
       </header>
 
-      <nav className="p-4 flex gap-2 max-w-4xl mx-auto mt-6 bg-slate-900/60 rounded-[2rem] border border-white/5">
+      <nav className="p-1.5 sm:p-2 flex gap-2 max-w-2xl mx-auto mt-6 sm:mt-10 bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-200 shadow-sm sticky top-20 sm:top-24 z-40 mx-3 sm:mx-auto overflow-x-auto snap-x snap-mandatory touch-pan-x pb-2">
         {[
           { id: 'scan', label: 'Pass', icon: '🎫' },
           { id: 'request', label: 'Alert', icon: '🔊' },
@@ -178,27 +185,32 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
           <button 
             key={tab.id}
             onClick={() => setActiveView(tab.id as any)}
-            className={`flex-1 py-4 rounded-[1.5rem] font-black transition-all flex items-center justify-center gap-3 ${activeView === tab.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800'}`}
+            className={`flex-shrink-0 min-w-[90px] sm:min-w-[110px] flex-1 py-3.5 sm:py-4 rounded-xl sm:rounded-[2rem] font-black transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 snap-center ${activeView === tab.id ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
           >
-            <span className="text-lg">{tab.icon}</span>
-            <span className="text-[10px] uppercase tracking-widest">{tab.label}</span>
+            <span className="text-base sm:text-lg">{tab.icon}</span>
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-widest">{tab.label}</span>
           </button>
         ))}
       </nav>
 
-      <main className="p-6 max-w-2xl mx-auto">
+      <main className="p-4 sm:p-8 max-w-3xl mx-auto pb-20">
         {feedback && (
-          <div className={`mb-6 p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest animate-in fade-in zoom-in duration-300 border-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : feedback.type === 'info' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+          <div className={`mb-6 sm:mb-8 p-4 sm:p-6 rounded-2xl sm:rounded-3xl text-center font-black text-[9px] sm:text-[10px] uppercase tracking-widest animate-in fade-in zoom-in duration-300 border-2 shadow-sm ${feedback.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : feedback.type === 'info' ? 'bg-slate-900 text-white border-slate-900' : 'bg-red-50 text-red-600 border-red-100'}`}>
             {feedback.message}
           </div>
         )}
 
         {activeView === 'scan' && (
-          <div className="bg-slate-900/80 p-10 rounded-[3rem] border border-white/10 text-center shadow-2xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-8">Manual Code Entry</p>
-            <form onSubmit={handleVerifyCode} className="space-y-8">
-              <input type="text" placeholder="000000" maxLength={6} className="w-full bg-black/40 border-2 border-slate-700 rounded-2xl text-center py-10 text-5xl font-mono font-black tracking-[0.5em] focus:border-indigo-500 outline-none text-white shadow-inner" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
-              <button type="submit" disabled={verifying} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-sm font-black rounded-2xl shadow-xl uppercase tracking-widest transition-all">
+          <div className="card-modern p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[4rem] text-center">
+            <p className="label-caps mb-8 sm:mb-10">Manual Code Entry</p>
+            <form onSubmit={handleVerifyCode} className="space-y-8 sm:space-y-10">
+              <div className="relative">
+                <input type="text" placeholder="000000" maxLength={6} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl sm:rounded-[2.5rem] text-center py-8 sm:py-12 text-4xl sm:text-6xl font-mono font-black tracking-[0.4em] sm:tracking-[0.6em] focus:border-slate-900 focus:bg-white outline-none text-slate-900 shadow-inner transition-all" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+                <div className="absolute inset-x-0 -bottom-3 flex justify-center">
+                  <span className="bg-white px-3 sm:px-4 text-[8px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">6-Digit Passcode</span>
+                </div>
+              </div>
+              <button type="submit" disabled={verifying} className="btn-primary w-full py-5 sm:py-6 text-sm">
                 {verifying ? 'Verifying...' : 'Validate Invite'}
               </button>
             </form>
@@ -206,54 +218,85 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
         )}
 
         {activeView === 'request' && (
-          <form onSubmit={handleRequestEntry} className="bg-slate-900/80 p-8 rounded-[3rem] border border-white/10 space-y-6 shadow-2xl">
-            <div className="flex justify-between items-start">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Dispatch Intercom</h2>
+          <form onSubmit={handleRequestEntry} className="card-modern p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[4rem] space-y-6 sm:space-y-8">
+            <div className="flex justify-between items-center mb-2 sm:mb-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl">🔊</div>
+                <h2 className="heading-lg text-lg sm:text-xl tracking-tight">Dispatch Intercom</h2>
+              </div>
               {residentProfile && (
-                <div className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-tighter border ${residentProfile.is_verified ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                  {residentProfile.is_verified ? 'Resident Verified' : 'Resident Unverified'}
+                <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border transition-all ${residentProfile.is_verified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                  {residentProfile.is_verified ? 'Verified' : 'Unverified'}
                 </div>
               )}
             </div>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <input required placeholder="Wing" className="bg-black/40 p-4 rounded-xl border border-white/10 focus:border-indigo-500 outline-none text-sm font-bold uppercase" value={requestForm.wing} onChange={e => setRequestForm({...requestForm, wing: e.target.value})} />
-                <input required placeholder="Flat #" className="bg-black/40 p-4 rounded-xl border border-white/10 focus:border-indigo-500 outline-none text-sm font-bold" value={requestForm.flatNumber} onChange={e => setRequestForm({...requestForm, flatNumber: e.target.value})} />
+            <div className="space-y-4 sm:space-y-5">
+              <div className="grid grid-cols-2 gap-4 sm:gap-5">
+                <div className="space-y-2">
+                  <label className="label-caps ml-4">Wing</label>
+                  <input required placeholder="e.g. A" className="input-modern uppercase" value={requestForm.wing} onChange={e => setRequestForm({...requestForm, wing: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <label className="label-caps ml-4">Flat Number</label>
+                  <input required placeholder="e.g. 101" className="input-modern" value={requestForm.flatNumber} onChange={e => setRequestForm({...requestForm, flatNumber: e.target.value})} />
+                </div>
               </div>
-              <input required placeholder="Guest Full Name" className="w-full bg-black/40 p-4 rounded-xl border border-white/10 focus:border-indigo-500 outline-none text-sm font-bold" value={requestForm.name} onChange={e => setRequestForm({...requestForm, name: e.target.value})} />
-              <input required placeholder="Reason for Visit" className="w-full bg-black/40 p-4 rounded-xl border border-white/10 focus:border-indigo-500 outline-none text-sm font-bold" value={requestForm.purpose} onChange={e => setRequestForm({...requestForm, purpose: e.target.value})} />
+              <div className="space-y-2">
+                <label className="label-caps ml-4">Guest Name</label>
+                <input required placeholder="Full Name" className="input-modern" value={requestForm.name} onChange={e => setRequestForm({...requestForm, name: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="label-caps ml-4">Purpose</label>
+                <input required placeholder="e.g. Delivery, Guest" className="input-modern" value={requestForm.purpose} onChange={e => setRequestForm({...requestForm, purpose: e.target.value})} />
+              </div>
             </div>
             
-            <button type="submit" disabled={verifying || !residentProfile?.is_verified} className={`w-full py-6 font-black rounded-2xl uppercase tracking-widest text-[11px] shadow-lg transition-all ${residentProfile?.is_verified ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
-              {verifying ? 'Transmitting...' : 'Send Telegram Alert'}
-            </button>
-            {!residentProfile && requestForm.flatNumber && <p className="text-[9px] text-red-400 font-black uppercase tracking-widest text-center mt-2">Unit not found in directory</p>}
+            <div className="pt-2 sm:pt-4">
+              <button type="submit" disabled={verifying || !residentProfile?.is_verified} className={`btn-primary w-full py-5 sm:py-6 text-sm ${!residentProfile?.is_verified ? 'opacity-30 grayscale' : ''}`}>
+                {verifying ? 'Transmitting...' : 'Send Telegram Alert'}
+              </button>
+              {!residentProfile && requestForm.flatNumber && (
+                <p className="text-[9px] sm:text-[10px] text-red-500 font-black uppercase tracking-widest text-center mt-4 sm:mt-6 animate-pulse">Unit not found in directory</p>
+              )}
+            </div>
           </form>
         )}
 
         {activeView === 'list' && (
-          <div className="space-y-4">
-            <div className="relative mb-6">
-              <input type="text" placeholder="Search visitors..." className="w-full bg-slate-900/60 border border-white/10 p-4 rounded-2xl outline-none text-xs font-medium focus:border-indigo-500 transition-all pl-12 shadow-inner" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              <span className="absolute left-4 top-4 opacity-40">🔍</span>
+          <div className="space-y-6">
+            <div className="relative mb-6 sm:mb-8">
+              <input type="text" placeholder="Search visitor logs..." className="input-modern pl-14 sm:pl-16" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <span className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 text-lg sm:text-xl opacity-30">🔍</span>
             </div>
-            {visitors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase())).map(v => (
-              <div key={v.id} className="bg-slate-900/60 p-5 rounded-[2rem] border border-white/5 flex items-center gap-5 group hover:bg-slate-800/80 transition-all">
-                <div className="w-12 h-12 bg-black/40 rounded-2xl flex items-center justify-center text-lg shadow-inner">
-                  {v.status === 'ENTERED' ? '✅' : v.status === 'EXITED' ? '⬅️' : '⏳'}
+            <div className="space-y-4">
+              {visitors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase())).map(v => (
+                <div key={v.id} className="card-modern p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] flex items-center gap-4 sm:gap-6 group hover:translate-x-1 transition-all">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-inner border border-slate-100">
+                    {v.status === 'ENTERED' ? '✅' : v.status === 'EXITED' ? '⬅️' : '⏳'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-tight text-slate-900 truncate">{v.name}</h3>
+                    <p className="label-caps opacity-60 mt-1 sm:mt-1.5 text-[8px] sm:text-[9px] truncate">Unit {v.flat_number} • {v.purpose}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {v.status === 'ENTERED' ? (
+                      <button onClick={() => handleExit(v.id)} className="btn-danger py-2 px-3 sm:px-5 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px]">Checkout</button>
+                    ) : (
+                      <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border transition-all ${v.status === 'WAITING_APPROVAL' ? 'bg-slate-900 text-white border-slate-900 animate-pulse' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                        {v.status === 'WAITING_APPROVAL' ? 'Pending' : v.status}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xs font-black uppercase tracking-tight">{v.name}</h3>
-                  <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Unit {v.flat_number} • {v.purpose}</p>
+              ))}
+              {visitors.length === 0 && (
+                <div className="py-24 sm:py-40 text-center bg-white rounded-[3rem] sm:rounded-[4rem] border-2 border-dashed border-slate-200">
+                  <div className="text-4xl sm:text-5xl mb-4 sm:mb-6 grayscale opacity-30">🗒️</div>
+                  <p className="label-caps tracking-[0.4em] px-6">No visitor records found</p>
                 </div>
-                {v.status === 'ENTERED' ? (
-                  <button onClick={() => handleExit(v.id)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-[8px] font-black uppercase tracking-widest rounded-lg shadow-lg active:scale-95 transition-all">Checkout</button>
-                ) : (
-                  <div className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${v.status === 'WAITING_APPROVAL' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' : 'bg-slate-800 text-slate-500 border-white/5'}`}>{v.status === 'WAITING_APPROVAL' ? 'Pending' : v.status}</div>
-                )}
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         )}
       </main>

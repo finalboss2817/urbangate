@@ -144,21 +144,25 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 font-inter relative">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 bg-slate-50 font-sans antialiased animate-fade-in relative overflow-hidden">
+      {/* Background Accents */}
+      <div className="absolute top-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-500/5 rounded-full -ml-32 sm:-ml-48 -mt-32 sm:-mt-48 blur-3xl"></div>
+      <div className="absolute bottom-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-slate-900/5 rounded-full -mr-32 sm:-mr-48 -mb-32 sm:-mb-48 blur-3xl"></div>
+
       {/* Identity Conflict Modal */}
       {showSecurityModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full p-10 text-center border border-slate-100 animate-in zoom-in-95 duration-300">
-            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-sm">⚠️</div>
-            <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Identity Mismatch</h2>
-            <p className="text-slate-500 text-sm leading-relaxed mb-8 font-medium">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl max-w-sm w-full p-8 sm:p-12 text-center border border-slate-100 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-red-50 text-red-600 rounded-2xl sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-4xl mx-auto mb-6 sm:mb-8 shadow-sm border border-red-100">⚠️</div>
+            <h2 className="heading-lg text-xl sm:text-2xl mb-3 sm:mb-4">Identity Mismatch</h2>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed mb-8 sm:mb-10 font-medium">
               The phone number you entered is <span className="text-red-600 font-bold underline decoration-2">incorrect</span> for this unit.
               <br/><br/>
               To protect the resident, we have blocked this access attempt. Please use the original mobile number registered with this flat.
             </p>
             <button 
               onClick={closeSecurityModal}
-              className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg hover:bg-slate-800 transition-all"
+              className="btn-primary w-full py-4 sm:py-5 bg-slate-900 hover:bg-slate-800"
             >
               Understand & Retry
             </button>
@@ -166,64 +170,94 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
       )}
 
-      <div className="mb-10 text-center">
-        <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl mx-auto mb-6 text-3xl">🏢</div>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">UrbanGate</h1>
-        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-2">Zero Trust Access Control</p>
+      <div className="mb-8 sm:mb-12 text-center relative z-10">
+        <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-900 text-white rounded-2xl sm:rounded-[2.5rem] flex items-center justify-center shadow-2xl mx-auto mb-6 sm:mb-8 text-3xl sm:text-4xl border border-white/10">🏢</div>
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">UrbanGate</h1>
+        <p className="label-caps tracking-[0.3em] sm:tracking-[0.4em] mt-3 sm:mt-4 opacity-40 text-[8px] sm:text-[10px]">Zero Trust Access Control</p>
       </div>
 
-      <div className="w-full max-w-md">
-        <div className="flex bg-white p-2 rounded-2xl border border-slate-200 mb-8">
-          <button onClick={() => setView('portal')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${view === 'portal' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Standard Access</button>
-          <button onClick={() => setView('admin')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${view === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Master Admin</button>
+      <div className="w-full max-w-md relative z-10">
+        <div className="flex bg-white p-1.5 sm:p-2 rounded-2xl sm:rounded-[2rem] border border-slate-200 mb-8 sm:mb-10 shadow-sm">
+          <button onClick={() => setView('portal')} className={`flex-1 py-3 sm:py-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl sm:rounded-[1.5rem] transition-all duration-300 ${view === 'portal' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>Portal</button>
+          <button onClick={() => setView('admin')} className={`flex-1 py-3 sm:py-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl sm:rounded-[1.5rem] transition-all duration-300 ${view === 'admin' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>Master</button>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm p-10 border border-slate-100">
+        <div className="card-modern rounded-[2.5rem] sm:rounded-[4rem] p-6 sm:p-12">
           {view === 'portal' ? (
-            <form onSubmit={handlePortalLogin} className="space-y-5">
-              <div className="flex gap-2 mb-6">
+            <form onSubmit={handlePortalLogin} className="space-y-5 sm:space-y-6">
+              <div className="flex gap-2 sm:gap-3 mb-8 sm:mb-10">
                 {[
                   { id: UserRole.RESIDENT, label: 'Resident', icon: '🏠' },
                   { id: UserRole.SECURITY, label: 'Guard', icon: '🛡️' },
                   { id: UserRole.BUILDING_ADMIN, label: 'Admin', icon: '💼' }
                 ].map(r => (
-                  <button key={r.id} type="button" onClick={() => setRole(r.id)} className={`flex-1 py-4 rounded-2xl border-2 transition-all text-center ${role === r.id ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-50 text-slate-400'}`}>
-                    <div className="text-xl mb-1">{r.icon}</div>
-                    <div className="text-[8px] font-black uppercase">{r.label}</div>
+                  <button key={r.id} type="button" onClick={() => setRole(r.id)} className={`flex-1 py-4 sm:py-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 text-center ${role === r.id ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200'}`}>
+                    <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{r.icon}</div>
+                    <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">{r.label}</div>
                   </button>
                 ))}
               </div>
 
-              <input required placeholder="Building Name" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} />
-              <input required placeholder="Full Name" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Building Name</label>
+                  <input required className="input-modern" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} placeholder="e.g. Royal Residency" />
+                </div>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Full Name</label>
+                  <input required className="input-modern" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. John Doe" />
+                </div>
 
-              {role === UserRole.RESIDENT && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <input required placeholder="Wing" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase" value={wing} onChange={(e) => setWing(e.target.value)} />
-                    <input required placeholder="Flat #" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold" value={flatNumber} onChange={(e) => setFlatNumber(e.target.value)} />
-                  </div>
-                  <input required type="tel" placeholder="Registered Mobile Number" className="w-full px-6 py-4 bg-indigo-50 border border-indigo-100 rounded-xl font-bold" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                </>
-              )}
-              
-              <input type="password" required placeholder="Access Key" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-mono tracking-widest font-black" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} />
+                {role === UserRole.RESIDENT && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Wing</label>
+                        <input required className="input-modern uppercase" value={wing} onChange={(e) => setWing(e.target.value)} placeholder="A" />
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Flat #</label>
+                        <input required className="input-modern" value={flatNumber} onChange={(e) => setFlatNumber(e.target.value)} placeholder="101" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Mobile Number</label>
+                      <input required type="tel" className="input-modern" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+91 00000 00000" />
+                    </div>
+                  </>
+                )}
+                
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Access Key</label>
+                  <input type="password" required className="input-modern font-mono tracking-[0.2em] sm:tracking-[0.3em] text-center" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="••••••" />
+                </div>
+              </div>
 
               {error && (
-                <div className="p-4 bg-red-50 text-red-500 text-[10px] font-black uppercase text-center border border-red-100 rounded-xl leading-relaxed">
+                <div className="p-4 sm:p-6 bg-red-50 text-red-600 text-[9px] sm:text-[10px] font-black uppercase text-center border border-red-100 rounded-xl sm:rounded-2xl leading-relaxed animate-shake">
                   ⚠️ {error}
                 </div>
               )}
 
-              <button type="submit" disabled={loading} className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all">
+              <button type="submit" disabled={loading} className="btn-primary w-full py-4 sm:py-6 text-xs sm:text-sm mt-2 sm:mt-4">
                 {loading ? 'Validating Identity...' : 'Secure Login'}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleAdminLogin} className="space-y-6">
-              <input type="email" required placeholder="Master Email" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
-              <input type="password" required placeholder="Master Password" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
-              <button type="submit" disabled={loading} className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg">Login to Core</button>
+            <form onSubmit={handleAdminLogin} className="space-y-6 sm:space-y-8">
+              <div className="space-y-4 sm:space-y-5">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Master Email</label>
+                  <input type="email" required className="input-modern" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@urbangate.com" />
+                </div>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Master Password</label>
+                  <input type="password" required className="input-modern" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-4 sm:py-6 text-xs sm:text-sm bg-slate-900 hover:bg-slate-800">
+                {loading ? 'Authenticating...' : 'Login to Core'}
+              </button>
             </form>
           )}
         </div>
