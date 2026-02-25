@@ -20,8 +20,8 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
   
   const [residentProfile, setResidentProfile] = useState<Profile | null>(null);
 
-  const refreshData = async () => {
-    setLoading(true);
+  const refreshData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     const { data } = await supabase
       .from('visitors')
       .select('*')
@@ -29,21 +29,31 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
       .order('created_at', { ascending: false });
     
     if (data) setVisitors(data);
-    setLoading(false);
+    if (!isSilent) setLoading(false);
   };
 
   useEffect(() => {
     refreshData();
+    
+    // Create a robust realtime channel
     const channel = supabase
-      .channel('security_realtime')
+      .channel(`building_alerts_${buildingId}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'visitors',
         filter: `building_id=eq.${buildingId}`
-      }, () => refreshData())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      }, (payload) => {
+        console.log('Realtime update received:', payload);
+        refreshData(true); // Silent refresh
+      })
+      .subscribe((status) => {
+        console.log('Realtime status:', status);
+      });
+
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
   }, [buildingId]);
 
   useEffect(() => {
