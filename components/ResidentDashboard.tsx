@@ -485,24 +485,46 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
 
             {activeTab === 'settings' && (
               <div className="max-w-2xl mx-auto pb-20">
-                <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+                <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
                   <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-[2rem] flex items-center justify-center text-3xl mx-auto mb-8">🛠️</div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Gate Integration</h2>
-                  <p className="text-slate-500 font-medium mb-10 px-4 leading-relaxed text-sm">Update your Telegram details for real-time security alerts.</p>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2 text-center">Gate Integration</h2>
+                  <p className="text-slate-500 font-medium mb-10 px-4 leading-relaxed text-sm text-center">Configure your Telegram connection to receive instant visitor alerts on your phone.</p>
                   
-                  <div className="space-y-6 text-left">
+                  <div className="space-y-8">
+                    {/* Setup Instructions */}
+                    <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-6 flex items-center gap-2">
+                        <span className="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px]">!</span>
+                        Setup Instructions
+                      </h3>
+                      <div className="space-y-4">
+                        {[
+                          { step: 1, text: 'Open Telegram and search for @userinfobot' },
+                          { step: 2, text: 'Send any message to get your "Id" (Chat ID)' },
+                          { step: 3, text: 'Paste that number in the field below' },
+                          { step: 4, text: 'Search for @UrbanGateBot and click "START"' }
+                        ].map(item => (
+                          <div key={item.step} className="flex gap-4 items-start">
+                            <span className="text-[10px] font-black text-slate-300 mt-1">{item.step}.</span>
+                            <p className="text-xs font-bold text-slate-600 leading-tight">{item.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="relative group">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4 mb-2">Telegram Chat ID</label>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4 mb-2">Your Telegram Chat ID</label>
                       <input 
-                        className="w-full px-8 py-5 bg-slate-50 border border-slate-200 rounded-3xl font-mono font-bold text-indigo-600 outline-none transition-all" 
+                        className="w-full px-8 py-5 bg-slate-50 border border-slate-200 rounded-3xl font-mono font-bold text-indigo-600 outline-none transition-all focus:border-indigo-500 focus:bg-white" 
                         defaultValue={profile.telegram_chat_id} 
-                        placeholder="Your Chat ID"
+                        placeholder="e.g. 123456789"
                         onBlur={(e) => {
                           if (e.target.value.trim()) {
                              supabase.from('profiles').update({ telegram_chat_id: e.target.value.trim() }).eq('id', profile.id).then(() => fetchData(true));
                           }
                         }}
                       />
+                      <p className="mt-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">Click outside to save changes</p>
                     </div>
                   </div>
                 </div>

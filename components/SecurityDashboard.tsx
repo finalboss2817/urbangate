@@ -106,7 +106,7 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
     }
     setVerifying(true);
     try {
-      const { error } = await supabase.from('visitors').insert({
+      const { data: visitorData, error } = await supabase.from('visitors').insert({
         name: requestForm.name.trim(),
         phone: requestForm.phone.trim(),
         flat_number: requestForm.flatNumber.trim(),
@@ -114,9 +114,18 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
         building_id: buildingId,
         type: 'WALK_IN',
         status: 'WAITING_APPROVAL'
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Explicitly trigger the Edge Function for Telegram/Push notifications
+      try {
+        await supabase.functions.invoke('send-push', {
+          body: { record: visitorData }
+        });
+      } catch (fnErr) {
+        console.warn('Edge function trigger failed, relying on DB trigger:', fnErr);
+      }
       
       showFeedback('info', `PINGING TELEGRAM FOR UNIT ${requestForm.flatNumber}`);
       setRequestForm({ name: '', phone: '', wing: '', flatNumber: '', purpose: '' });

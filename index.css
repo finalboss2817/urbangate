@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --bg: #f8fafc;
+  --indigo-600: #4f46e5;
+}
+
+body {
+  background-color: var(--bg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-inter {
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl transition-all hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 bg-white text-slate-600 font-semibold rounded-xl border border-slate-200 transition-all hover:bg-slate-50 active:scale-95;
+}

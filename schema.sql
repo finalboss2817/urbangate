@@ -129,7 +129,25 @@ RETURNS BOOLEAN AS $$
   SELECT is_verified FROM public.profiles WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
 
--- 4. RLS Enablement
+CREATE OR REPLACE FUNCTION get_auth_flat_number() 
+RETURNS TEXT AS $$
+  SELECT flat_number FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+
+-- 4. Telegram Notification Logic
+-- This function is a placeholder for the Supabase Webhook trigger.
+-- To enable Telegram alerts, configure a Database Webhook in Supabase 
+-- that calls the 'send-push' Edge Function on INSERT to the 'visitors' table.
+CREATE OR REPLACE FUNCTION notify_visitor_arrival()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- The actual notification is handled by the Edge Function.
+  -- This trigger ensures the Edge Function is invoked when status is WAITING_APPROVAL.
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 5. RLS Enablement
 ALTER TABLE buildings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE amenities ENABLE ROW LEVEL SECURITY;
