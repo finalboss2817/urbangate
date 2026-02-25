@@ -48,22 +48,36 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
 
   useEffect(() => {
     const checkResident = async () => {
-      if (requestForm.flatNumber.length >= 1) {
-        const { data } = await supabase
+      const flat = requestForm.flatNumber.trim();
+      const wing = requestForm.wing.trim().toUpperCase();
+      
+      if (flat.length >= 1) {
+        let query = supabase
           .from('profiles')
           .select('*')
           .eq('building_id', buildingId)
-          .eq('flat_number', requestForm.flatNumber)
-          .maybeSingle();
+          .eq('flat_number', flat);
         
-        setResidentProfile(data || null);
+        // If wing is provided, filter by it to be precise
+        if (wing) {
+          query = query.eq('wing', wing);
+        }
+        
+        const { data, error } = await query.maybeSingle();
+        
+        if (error) {
+          console.error('Lookup error:', error);
+          setResidentProfile(null);
+        } else {
+          setResidentProfile(data || null);
+        }
       } else {
         setResidentProfile(null);
       }
     };
     const timer = setTimeout(checkResident, 400);
     return () => clearTimeout(timer);
-  }, [requestForm.flatNumber, buildingId]);
+  }, [requestForm.flatNumber, requestForm.wing, buildingId]);
 
   const showFeedback = (type: 'success' | 'error' | 'info', message: string) => {
     setFeedback({ type, message });
