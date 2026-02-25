@@ -35,21 +35,19 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
   useEffect(() => {
     refreshData();
     
-    // Create a robust realtime channel
+    // Subscribe to ALL changes in the visitors table for this building
     const channel = supabase
-      .channel(`building_alerts_${buildingId}`)
+      .channel('any')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'visitors',
         filter: `building_id=eq.${buildingId}`
       }, (payload) => {
-        console.log('Realtime update received:', payload);
+        console.log('Change detected:', payload);
         refreshData(true); // Silent refresh
       })
-      .subscribe((status) => {
-        console.log('Realtime status:', status);
-      });
+      .subscribe();
 
     return () => { 
       supabase.removeChannel(channel); 
