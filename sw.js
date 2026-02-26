@@ -24,8 +24,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon.png',
-    badge: '/badge.png',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
     vibrate: [300, 100, 300, 100, 400],
     tag: 'gate-intercom',
     renotify: true,
