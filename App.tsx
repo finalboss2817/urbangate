@@ -44,11 +44,23 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        setInitError('Identity sync timed out. Please check your connection or refresh.');
+      }
+    }, 15000); // 15 second timeout
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(timeout);
       setSession(session);
       if (session) fetchProfile(session.user.id);
       else setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      clearTimeout(timeout);
+      console.error('Session fetch error:', err);
+      setLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -59,7 +71,10 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   if (loading) return (

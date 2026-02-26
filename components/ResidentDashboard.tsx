@@ -78,23 +78,37 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
     fetchData();
     
     const channel = supabase
-      .channel(`resident_node_${profile.id.slice(0, 5)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+      .channel(`resident_node_${profile.id.slice(0, 8)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const msg = payload.new as ChatMessage;
+        if (msg.building_id === buildingId) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visitors', filter: `flat_number=eq.${flatNumber}` }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          const msg = payload.new as ChatMessage;
-          if (msg.building_id === buildingId) {
-            setMessages(prev => {
-              const exists = prev.some(m => m.id === msg.id);
-              if (exists) return prev;
-              return [...prev, msg];
-            });
+          const newVisitor = payload.new as Visitor;
+          setVisitors(prev => [newVisitor, ...prev]);
+          if (newVisitor.status === 'WAITING_APPROVAL') {
+            setPendingRequests(prev => [newVisitor, ...prev]);
           }
-        } else if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as Visitor;
+          setVisitors(prev => prev.map(v => v.id === updated.id ? updated : v));
+          if (updated.status !== 'WAITING_APPROVAL') {
+            setPendingRequests(prev => prev.filter(v => v.id !== updated.id));
+          }
+        } else {
           fetchData(true);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'visitors', filter: `flat_number=eq.${flatNumber}` }, () => fetchData(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notices', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
       .subscribe((status) => {
         setIsRealtimeActive(status === 'SUBSCRIBED');
@@ -164,8 +178,22 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
   };
 
   const handleDecision = async (visitorId: string, status: 'ENTERED' | 'REJECTED') => {
-    await supabase.from('visitors').update({ status, check_in_at: status === 'ENTERED' ? new Date().toISOString() : null }).eq('id', visitorId);
-    fetchData(true);
+    // Optimistic UI update
+    setPendingRequests(prev => prev.filter(v => v.id !== visitorId));
+    setVisitors(prev => prev.map(v => v.id === visitorId ? { ...v, status } : v));
+    
+    try {
+      const { error } = await supabase.from('visitors').update({ 
+        status, 
+        check_in_at: status === 'ENTERED' ? new Date().toISOString() : null 
+      }).eq('id', visitorId);
+      
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Decision error:', err);
+      // Revert on error
+      fetchData(true);
+    }
   };
 
   const [bookingForm, setBookingForm] = useState({ amenityId: '', date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '10:00' });

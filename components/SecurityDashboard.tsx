@@ -37,7 +37,7 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
     
     // Subscribe to ALL changes in the visitors table for this building
     const channel = supabase
-      .channel('any')
+      .channel(`security_node_${buildingId}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
@@ -45,7 +45,16 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
         filter: `building_id=eq.${buildingId}`
       }, (payload) => {
         console.log('Change detected:', payload);
-        refreshData(true); // Silent refresh
+        if (payload.eventType === 'INSERT') {
+          setVisitors(prev => [payload.new as Visitor, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as Visitor;
+          setVisitors(prev => prev.map(v => v.id === updated.id ? updated : v));
+        } else if (payload.eventType === 'DELETE') {
+          setVisitors(prev => prev.filter(v => v.id !== payload.old.id));
+        } else {
+          refreshData(true);
+        }
       })
       .subscribe();
 
