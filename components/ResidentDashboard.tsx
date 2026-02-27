@@ -202,13 +202,60 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation: End time must be after start time
+    if (bookingForm.startTime >= bookingForm.endTime) {
+      alert("End time must be after start time.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('bookings').insert({ ...bookingForm, building_id: buildingId, resident_name: name, flat_number: flatNumber, profile_id: profile.id, amenity_id: bookingForm.amenityId, start_time: bookingForm.startTime, end_time: bookingForm.endTime });
+      // 0. Validate against Facility Operating Hours
+      const selectedAmenity = amenities.find(a => a.id === bookingForm.amenityId);
+      if (selectedAmenity) {
+        if (bookingForm.startTime < selectedAmenity.open_time || bookingForm.endTime > selectedAmenity.close_time) {
+          throw new Error(`Invalid Time: This facility is only open between ${selectedAmenity.open_time} and ${selectedAmenity.close_time}.`);
+        }
+      }
+
+      // 1. Check for existing overlapping bookings (Clash Detection)
+      const { data: clashes, error: clashError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('amenity_id', bookingForm.amenityId)
+        .eq('date', bookingForm.date)
+        .lt('start_time', bookingForm.endTime) // Existing start is before requested end
+        .gt('end_time', bookingForm.startTime); // Existing end is after requested start
+
+      if (clashError) throw clashError;
+
+      if (clashes && clashes.length > 0) {
+        throw new Error('This slot is already reserved by another resident. Please choose a different time or date.');
+      }
+
+      // 2. Proceed with booking if no clashes
+      const { error } = await supabase.from('bookings').insert({ 
+        ...bookingForm, 
+        building_id: buildingId, 
+        resident_name: name, 
+        flat_number: flatNumber, 
+        profile_id: profile.id, 
+        amenity_id: bookingForm.amenityId, 
+        start_time: bookingForm.startTime, 
+        end_time: bookingForm.endTime 
+      });
+      
       if (error) throw error;
+      
       setBookingForm({ ...bookingForm, startTime: '09:00', endTime: '10:00' });
       fetchData(true);
-    } catch (err: any) { alert(err.message); } finally { setSubmitting(false); }
+      alert('Reservation confirmed! ✨');
+    } catch (err: any) { 
+      alert(err.message); 
+    } finally { 
+      setSubmitting(false); 
+    }
   };
 
   const handleInviteVisitor = async (e: React.FormEvent) => {
