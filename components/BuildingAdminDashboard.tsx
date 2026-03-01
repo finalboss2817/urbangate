@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Notice, Amenity, Booking, Profile, Achievement } from '../types';
+import { Notice, Amenity, Booking, Profile, Achievement, Visitor } from '../types';
 
 interface Props {
   buildingId: string;
@@ -9,28 +9,41 @@ interface Props {
 }
 
 const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'notices' | 'amenities' | 'bookings' | 'residents' | 'achievements'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'amenities' | 'bookings' | 'residents' | 'achievements' | 'logs'>('notices');
   const [notices, setNotices] = useState<Notice[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [residents, setResidents] = useState<Profile[]>([]);
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newNotice, setNewNotice] = useState({ title: '', content: '' });
   const [newAchievement, setNewAchievement] = useState({ title: '', content: '', image_url: '' });
-  const [newAmenity, setNewAmenity] = useState({ name: '', description: '', capacity: 10, openTime: '06:00', closeTime: '22:00' });
+  const [newAmenity, setNewAmenity] = useState({ name: '', description: '', capacity: 10, open_time: '06:00', close_time: '22:00' });
+
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    const parts = time.split(':');
+    const h = parseInt(parts[0]);
+    const m = parts[1] || '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHours = h % 12 || 12;
+    return `${displayHours}:${m} ${ampm}`;
+  };
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [noticesRes, achievementsRes, amenitiesRes, bookingsRes, residentsRes] = await Promise.all([
+      const [noticesRes, achievementsRes, amenitiesRes, bookingsRes, residentsRes, visitorsRes] = await Promise.all([
         supabase.from('notices').select('*').eq('building_id', buildingId).order('created_at', { ascending: false }),
         supabase.from('achievements').select('*').eq('building_id', buildingId).order('created_at', { ascending: false }),
         supabase.from('amenities').select('*').eq('building_id', buildingId),
         supabase.from('bookings').select('*').eq('building_id', buildingId).order('date', { ascending: false }),
-        supabase.from('profiles').select('*').eq('building_id', buildingId).eq('role', 'RESIDENT').order('is_verified', { ascending: true })
+        supabase.from('profiles').select('*').eq('building_id', buildingId).eq('role', 'RESIDENT').order('is_verified', { ascending: true }),
+        supabase.from('visitors').select('*').eq('building_id', buildingId).order('created_at', { ascending: false })
       ]);
 
       if (noticesRes.data) setNotices(noticesRes.data);
@@ -38,6 +51,7 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
       if (amenitiesRes.data) setAmenities(amenitiesRes.data);
       if (bookingsRes.data) setBookings(bookingsRes.data);
       if (residentsRes.data) setResidents(residentsRes.data);
+      if (visitorsRes.data) setVisitors(visitorsRes.data);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -53,6 +67,7 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notices', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -120,8 +135,44 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
     try {
       const { error } = await supabase.from('amenities').insert({ ...newAmenity, building_id: buildingId });
       if (error) alert(error.message);
-      else { fetchData(true); setNewAmenity({ name: '', description: '', capacity: 10, openTime: '06:00', closeTime: '22:00' }); }
+      else { fetchData(true); setNewAmenity({ name: '', description: '', capacity: 10, open_time: '06:00', close_time: '22:00' }); }
     } finally { setIsSubmitting(false); }
+  };
+
+  const downloadLogs = () => {
+    const filtered = visitors.filter(v => v.created_at.startsWith(selectedMonth));
+    if (filtered.length === 0) {
+      alert("No logs found for the selected month.");
+      return;
+    }
+    
+    const headers = ['Name', 'Phone', 'Purpose', 'Flat', 'Type', 'Status', 'Check-in', 'Check-out', 'Date'];
+    const rows = filtered.map(v => [
+      v.name,
+      v.phone,
+      v.purpose,
+      v.flat_number,
+      v.type,
+      v.status,
+      v.check_in_at ? new Date(v.check_in_at).toLocaleString() : '-',
+      v.check_out_at ? new Date(v.check_out_at).toLocaleString() : '-',
+      new Date(v.created_at).toLocaleDateString()
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `visitor_logs_${selectedMonth}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -146,7 +197,7 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
 
       <div className="max-w-7xl mx-auto p-3 sm:p-8">
         <nav className="flex bg-white p-1.5 sm:p-2 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-200 mb-8 sm:mb-12 w-full overflow-x-auto gap-2 sticky top-20 sm:top-24 z-40 snap-x snap-mandatory touch-pan-x pb-2">
-          {(['notices', 'achievements', 'amenities', 'bookings', 'residents'] as const).map(tab => (
+          {(['notices', 'achievements', 'amenities', 'bookings', 'residents', 'logs'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -371,11 +422,11 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
                       <div className="grid grid-cols-2 gap-4 sm:gap-5">
                         <div className="space-y-2">
                           <label className="label-caps ml-4">Open</label>
-                          <input type="time" required className="input-modern" value={newAmenity.openTime} onChange={e => setNewAmenity({...newAmenity, openTime: e.target.value})} />
+                          <input type="time" required className="input-modern" value={newAmenity.open_time} onChange={e => setNewAmenity({...newAmenity, open_time: e.target.value})} />
                         </div>
                         <div className="space-y-2">
                           <label className="label-caps ml-4">Close</label>
-                          <input type="time" required className="input-modern" value={newAmenity.closeTime} onChange={e => setNewAmenity({...newAmenity, closeTime: e.target.value})} />
+                          <input type="time" required className="input-modern" value={newAmenity.close_time} onChange={e => setNewAmenity({...newAmenity, close_time: e.target.value})} />
                         </div>
                       </div>
                     </div>
@@ -397,7 +448,7 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
                         </div>
                         <div className="flex justify-between items-center py-2 sm:py-3">
                           <span className="label-caps opacity-40 text-[8px] sm:text-[10px]">Hours</span>
-                          <span className="font-black text-slate-900 text-xs sm:text-sm">{a.open_time} - {a.close_time}</span>
+                          <span className="font-black text-slate-900 text-xs sm:text-sm">{formatTime(a.open_time)} - {formatTime(a.close_time)}</span>
                         </div>
                       </div>
                     </div>
@@ -437,7 +488,7 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
                           <td className="px-6 sm:px-10 py-6 sm:py-10">
                             <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-900 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black border border-slate-200">{b.flat_number}</span>
                           </td>
-                          <td className="px-6 sm:px-10 py-6 sm:py-10 font-black text-slate-900 text-sm sm:text-base">{b.date} • {b.start_time}</td>
+                          <td className="px-6 sm:px-10 py-6 sm:py-10 font-black text-slate-900 text-sm sm:text-base">{b.date} • {formatTime(b.start_time)} - {formatTime(b.end_time)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -448,6 +499,77 @@ const BuildingAdminDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
                       <p className="label-caps tracking-[0.4em] px-6">No active bookings</p>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'logs' && (
+              <div className="space-y-6 sm:space-y-10">
+                <div className="bg-slate-900 p-6 sm:p-12 rounded-[2.5rem] sm:rounded-[4rem] text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white/5 rounded-full -mr-24 sm:-mr-32 -mt-24 sm:-mt-32 blur-3xl"></div>
+                  <div className="text-center md:text-left relative z-10">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Visitor Intelligence</h2>
+                    <p className="text-white/40 label-caps mt-2 sm:mt-3 text-[8px] sm:text-[10px]">Building Access History</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 relative z-10 w-full md:w-auto">
+                    <input 
+                      type="month" 
+                      value={selectedMonth} 
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-xs font-black outline-none focus:border-white/40 transition-all"
+                    />
+                    <button 
+                      onClick={downloadLogs}
+                      className="btn-primary bg-white text-slate-900 hover:bg-slate-100 px-8 py-4 rounded-2xl sm:rounded-[2rem] text-xs font-black uppercase tracking-widest"
+                    >
+                      📥 Download CSV
+                    </button>
+                  </div>
+                </div>
+
+                <div className="card-modern rounded-[2rem] sm:rounded-[4rem] overflow-hidden">
+                  <div className="overflow-x-auto show-scrollbar">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
+                      <thead>
+                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                          <th className="px-6 sm:px-10 py-6 sm:py-8 label-caps text-slate-400 text-[8px] sm:text-[10px]">Visitor</th>
+                          <th className="px-6 sm:px-10 py-6 sm:py-8 label-caps text-slate-400 text-[8px] sm:text-[10px]">Unit</th>
+                          <th className="px-6 sm:px-10 py-6 sm:py-8 label-caps text-slate-400 text-[8px] sm:text-[10px]">Purpose</th>
+                          <th className="px-6 sm:px-10 py-6 sm:py-8 label-caps text-slate-400 text-[8px] sm:text-[10px]">Status</th>
+                          <th className="px-6 sm:px-10 py-6 sm:py-8 label-caps text-slate-400 text-[8px] sm:text-[10px]">Timeline</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {visitors.filter(v => v.created_at.startsWith(selectedMonth)).map(v => (
+                          <tr key={v.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="px-6 sm:px-10 py-6 sm:py-8">
+                               <p className="font-black text-slate-900 text-base sm:text-lg tracking-tight">{v.name}</p>
+                               <p className="text-[8px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 sm:mt-1.5">{v.phone}</p>
+                            </td>
+                            <td className="px-6 sm:px-10 py-6 sm:py-8">
+                              <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-900 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black border border-slate-200">{v.flat_number}</span>
+                            </td>
+                            <td className="px-6 sm:px-10 py-6 sm:py-8 font-bold text-slate-500 text-xs sm:text-sm">{v.purpose}</td>
+                            <td className="px-6 sm:px-10 py-6 sm:py-8">
+                              <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border transition-all ${v.status === 'ENTERED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : v.status === 'EXITED' ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                {v.status}
+                              </span>
+                            </td>
+                            <td className="px-6 sm:px-10 py-6 sm:py-8">
+                               <p className="text-[10px] sm:text-xs font-black text-slate-900">{new Date(v.created_at).toLocaleDateString()}</p>
+                               <p className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">In: {v.check_in_at ? new Date(v.check_in_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</p>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {visitors.length === 0 && (
+                      <div className="py-24 sm:py-40 text-center">
+                        <div className="text-4xl sm:text-5xl mb-4 sm:mb-6 grayscale opacity-30">🗒️</div>
+                        <p className="label-caps tracking-[0.4em] px-6">No visitor history found</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

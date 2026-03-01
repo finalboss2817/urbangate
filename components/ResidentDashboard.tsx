@@ -110,6 +110,7 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'achievements', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notices', filter: `building_id=eq.${buildingId}` }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `profile_id=eq.${profile.id}` }, () => fetchData(true))
       .subscribe((status) => {
         setIsRealtimeActive(status === 'SUBSCRIBED');
       });
@@ -200,8 +201,24 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
   const [visitorForm, setVisitorForm] = useState({ name: '', phone: '', purpose: '' });
   const [submitting, setSubmitting] = useState(false);
 
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    // Handle HH:MM:SS or HH:MM format
+    const parts = time.split(':');
+    const h = parseInt(parts[0]);
+    const m = parts[1] || '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHours = h % 12 || 12;
+    return `${displayHours}:${m} ${ampm}`;
+  };
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!bookingForm.amenityId) {
+      alert("Please select an amenity first.");
+      return;
+    }
     
     // Basic validation: End time must be after start time
     if (bookingForm.startTime >= bookingForm.endTime) {
@@ -210,10 +227,14 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
     }
 
     setSubmitting(true);
+    console.log('Attempting booking:', { ...bookingForm, profileId: profile.id });
+    
     try {
       // 0. Validate against Facility Operating Hours
       const selectedAmenity = amenities.find(a => a.id === bookingForm.amenityId);
-      if (selectedAmenity) {
+      console.log('Selected amenity for validation:', selectedAmenity);
+      
+      if (selectedAmenity && selectedAmenity.open_time && selectedAmenity.close_time) {
         if (bookingForm.startTime < selectedAmenity.open_time || bookingForm.endTime > selectedAmenity.close_time) {
           throw new Error(`Invalid Time: This facility is only open between ${selectedAmenity.open_time} and ${selectedAmenity.close_time}.`);
         }
@@ -236,12 +257,12 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
 
       // 2. Proceed with booking if no clashes
       const { error } = await supabase.from('bookings').insert({ 
-        ...bookingForm, 
         building_id: buildingId, 
-        resident_name: name, 
-        flat_number: flatNumber, 
-        profile_id: profile.id, 
         amenity_id: bookingForm.amenityId, 
+        profile_id: profile.id, 
+        resident_name: name || 'Resident', 
+        flat_number: flatNumber, 
+        date: bookingForm.date, 
         start_time: bookingForm.startTime, 
         end_time: bookingForm.endTime 
       });
@@ -249,12 +270,25 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
       if (error) throw error;
       
       setBookingForm({ ...bookingForm, startTime: '09:00', endTime: '10:00' });
-      fetchData(true);
+      await fetchData(true);
       alert('Reservation confirmed! ✨');
     } catch (err: any) { 
-      alert(err.message); 
+      console.error('Booking error:', err);
+      alert(err.message || 'Failed to complete reservation. Please try again.'); 
     } finally { 
       setSubmitting(false); 
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this reservation?')) return;
+    
+    try {
+      const { error } = await supabase.from('bookings').delete().eq('id', id);
+      if (error) throw error;
+      fetchData(true);
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -525,7 +559,11 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
                       <label className="label-caps ml-4">Select Amenity</label>
                       <select required className="input-modern" value={bookingForm.amenityId} onChange={e => setBookingForm({...bookingForm, amenityId: e.target.value})}>
                         <option value="">Choose...</option>
-                        {amenities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        {amenities.map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.name} ({formatTime(a.open_time)} - {formatTime(a.close_time)})
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -553,10 +591,19 @@ const ResidentDashboard: React.FC<Props> = ({ profile, onLogout }) => {
                     {myBookings.map(b => (
                       <div key={b.id} className="p-4 sm:p-6 border border-slate-100 rounded-2xl sm:rounded-3xl flex justify-between items-center bg-slate-50/30 hover:bg-slate-50 transition-colors">
                         <div className="flex items-center gap-3 sm:gap-4">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-xl flex items-center justify-center shadow-sm border border-slate-100">✨</div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteBooking(b.id);
+                            }}
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-white text-red-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-sm border border-slate-100 hover:bg-red-50 transition-colors relative z-10"
+                            title="Cancel Reservation"
+                          >
+                            🗑️
+                          </button>
                           <div>
                             <p className="font-bold text-slate-900 text-sm sm:text-base">{amenities.find(a => a.id === b.amenity_id)?.name}</p>
-                            <p className="label-caps opacity-60 mt-1 text-[8px] sm:text-[10px]">{b.date} • {b.start_time}</p>
+                            <p className="label-caps opacity-60 mt-1 text-[8px] sm:text-[10px]">{b.date} • {formatTime(b.start_time)} - {formatTime(b.end_time)}</p>
                           </div>
                         </div>
                         <span className="text-[8px] sm:text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 sm:px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-widest">Confirmed</span>
