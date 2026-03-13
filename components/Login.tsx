@@ -11,6 +11,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [view, setView] = useState<'portal' | 'admin'>('portal');
   const [role, setRole] = useState<UserRole>(UserRole.RESIDENT);
   const [buildingName, setBuildingName] = useState('');
+  const [availableBuildings, setAvailableBuildings] = useState<any[]>([]);
   const [fullName, setFullName] = useState('');
   const [wing, setWing] = useState('');
   const [flatNumber, setFlatNumber] = useState('');
@@ -24,20 +25,46 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return sessionStorage.getItem('urbangate_auth_error') === 'identity_mismatch';
   });
 
+  React.useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        // Fetch full details for discovery-first login
+        const { data, error } = await supabase.from('buildings').select('*');
+        if (error) console.error('Discovery Error:', error);
+        if (data) {
+          console.log('Building Ledger Synchronized:', data.length, 'buildings found');
+          setAvailableBuildings(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch building ledger:', err);
+      }
+    };
+    fetchBuildings();
+  }, []);
+
   const handlePortalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // 1. Resolve Building
-      const { data: bld, error: bldErr } = await supabase
-        .from('buildings')
-        .select('*')
-        .ilike('name', buildingName.trim())
-        .maybeSingle();
+      // 1. Discovery-First Resolution
+      const normalizedInput = buildingName.trim().toLowerCase();
+      let bld = availableBuildings.find(b => b.name.trim().toLowerCase() === normalizedInput);
 
-      if (bldErr || !bld) throw new Error('Building not found. Please verify the name.');
+      // Fallback to direct query only if discovery cache is empty or missing the item
+      if (!bld) {
+        const { data, error: bldErr } = await supabase
+          .from('buildings')
+          .select('*')
+          .ilike('name', buildingName.trim())
+          .maybeSingle();
+        
+        if (bldErr) throw new Error(`Lookup Error: ${bldErr.message}`);
+        bld = data;
+      }
+
+      if (!bld) throw new Error('Building not found. Please select from the suggestions.');
 
       // 2. Validate Access Key
       let isCodeValid = false;
@@ -201,7 +228,19 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div className="space-y-3 sm:space-y-4">
                 <div className="space-y-1.5 sm:space-y-2">
                   <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Building Name</label>
-                  <input required className="input-modern" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} placeholder="e.g. Royal Residency" />
+                  <input 
+                    list="building-suggestions"
+                    required 
+                    className="input-modern" 
+                    value={buildingName} 
+                    onChange={(e) => setBuildingName(e.target.value)} 
+                    placeholder="Type or select building..." 
+                  />
+                  <datalist id="building-suggestions">
+                    {availableBuildings.map(b => (
+                      <option key={b.id} value={b.name} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="space-y-1.5 sm:space-y-2">
                   <label className="label-caps ml-4 text-[8px] sm:text-[10px]">Full Name</label>

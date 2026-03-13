@@ -43,11 +43,11 @@ const SuperAdminDashboard: React.FC<Props> = ({ onLogout }) => {
   const handleAddBuilding = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('buildings').insert([{
-      name: newBuilding.name,
-      address: newBuilding.address,
-      resident_code: newBuilding.resident_code,
-      admin_code: newBuilding.admin_code,
-      security_code: newBuilding.security_code
+      name: newBuilding.name.trim(),
+      address: newBuilding.address.trim(),
+      resident_code: newBuilding.resident_code.trim(),
+      admin_code: newBuilding.admin_code.trim(),
+      security_code: newBuilding.security_code.trim()
     }]);
 
     if (error) {

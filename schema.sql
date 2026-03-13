@@ -163,6 +163,15 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "buildings_read_policy" ON buildings;
 CREATE POLICY "buildings_read_policy" ON buildings FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "buildings_admin_manage" ON buildings;
+CREATE POLICY "buildings_admin_manage" ON buildings FOR ALL USING (
+  get_auth_role() = 'SUPER_ADMIN'
+);
+
+-- Explicitly grant permission to the anonymous role for discovery
+GRANT SELECT ON TABLE public.buildings TO anon;
+GRANT SELECT ON TABLE public.buildings TO authenticated;
+
 -- 5.2 Profiles: Fixes sign-up and recursion
 DROP POLICY IF EXISTS "profiles_self_manage" ON profiles;
 CREATE POLICY "profiles_self_manage" ON profiles 
