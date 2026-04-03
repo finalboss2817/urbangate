@@ -28,8 +28,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   React.useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        // Fetch full details for discovery-first login
-        const { data, error } = await supabase.from('buildings').select('*');
+        // Fetch necessary columns for discovery-first login
+        const { data, error } = await supabase.from('buildings').select('id, name, resident_code, security_code, admin_code');
         if (error) console.error('Discovery Error:', error);
         if (data) {
           console.log('Building Ledger Synchronized:', data.length, 'buildings found');
@@ -56,7 +56,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       if (!bld) {
         const { data, error: bldErr } = await supabase
           .from('buildings')
-          .select('*')
+          .select('id, name, resident_code, security_code, admin_code')
           .ilike('name', buildingName.trim())
           .maybeSingle();
         

@@ -116,23 +116,23 @@ END $$;
 -- 3. Security Helper Functions (SECURITY DEFINER to break recursion)
 CREATE OR REPLACE FUNCTION get_auth_role() 
 RETURNS TEXT AS $$
-  SELECT role FROM public.profiles WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+  SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 CREATE OR REPLACE FUNCTION get_auth_building() 
 RETURNS UUID AS $$
-  SELECT building_id FROM public.profiles WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+  SELECT building_id FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 CREATE OR REPLACE FUNCTION is_auth_verified() 
 RETURNS BOOLEAN AS $$
-  SELECT is_verified FROM public.profiles WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+  SELECT is_verified FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 CREATE OR REPLACE FUNCTION get_auth_flat_number() 
 RETURNS TEXT AS $$
-  SELECT flat_number FROM public.profiles WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+  SELECT flat_number FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 4. Telegram Notification Logic
 -- This function is a placeholder for the Supabase Webhook trigger.
@@ -237,7 +237,7 @@ CREATE POLICY "achievements_admin" ON achievements FOR ALL USING (
 DROP POLICY IF EXISTS "visitors_resident" ON visitors;
 CREATE POLICY "visitors_resident" ON visitors FOR ALL USING (
   building_id = get_auth_building() AND (
-    flat_number = (SELECT flat_number FROM profiles WHERE id = auth.uid())
+    flat_number = get_auth_flat_number()
     OR get_auth_role() IN ('SECURITY', 'BUILDING_ADMIN')
   )
 );

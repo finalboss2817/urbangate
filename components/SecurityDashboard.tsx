@@ -19,6 +19,11 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   
   const [residentProfile, setResidentProfile] = useState<Profile | null>(null);
+  const [requestSent, setRequestSent] = useState(false);
+  const [lastVisitorId, setLastVisitorId] = useState<string | null>(null);
+  const [residentPhoneForCall, setResidentPhoneForCall] = useState('');
+  const [showDecisionModal, setShowDecisionModal] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   const refreshData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -149,14 +154,67 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
 
       if (error) throw error;
       
+      setLastVisitorId(visitorData.id);
+      setResidentPhoneForCall(residentProfile.phone_number || '');
+      setRequestSent(true);
+      
       showFeedback('info', `PINGING TELEGRAM FOR UNIT ${requestForm.flatNumber}`);
+      // Don't reset form yet so guard can see details if needed, or just reset and rely on requestSent state
       setRequestForm({ name: '', phone: '', wing: '', flatNumber: '', purpose: '' });
-      setActiveView('list');
     } catch (err: any) {
       showFeedback('error', 'INTERCOM FAILURE');
     } finally {
       setVerifying(false);
     }
+  };
+
+  const handleCallResident = () => {
+    if (!residentPhoneForCall) return;
+    window.location.href = `tel:${residentPhoneForCall}`;
+    
+    // Start 30s countdown for decision modal
+    setCountdown(30);
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setShowDecisionModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleManualDecision = async (status: 'ENTERED' | 'REJECTED') => {
+    if (!lastVisitorId) return;
+    
+    try {
+      const updateData: any = { status };
+      if (status === 'ENTERED') {
+        updateData.check_in_at = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from('visitors')
+        .update(updateData)
+        .eq('id', lastVisitorId);
+      
+      if (error) throw error;
+      
+      showFeedback('success', status === 'ENTERED' ? 'VISITOR APPROVED' : 'VISITOR REJECTED');
+      setShowDecisionModal(false);
+      setRequestSent(false);
+      setLastVisitorId(null);
+      setActiveView('list');
+    } catch (err) {
+      showFeedback('error', 'FAILED TO UPDATE DECISION');
+    }
+  };
+
+  const onSignOut = () => {
+    console.log('SecurityDashboard: Sign Out clicked');
+    onLogout();
   };
 
   const handleExit = async (id: string) => {
@@ -178,7 +236,7 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
             </p>
           </div>
         </div>
-        <button onClick={onLogout} className="btn-danger py-2 px-4 sm:py-3 sm:px-6">
+        <button onClick={onSignOut} className="btn-danger py-2 px-4 sm:py-3 sm:px-6">
           <span className="hidden sm:inline">Sign Out</span>
           <span className="sm:hidden">Exit</span>
           <span className="text-lg">→</span>
@@ -227,49 +285,79 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
         )}
 
         {activeView === 'request' && (
-          <form onSubmit={handleRequestEntry} className="card-modern p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[4rem] space-y-6 sm:space-y-8">
-            <div className="flex justify-between items-center mb-2 sm:mb-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl">🔊</div>
-                <h2 className="heading-lg text-lg sm:text-xl tracking-tight">Dispatch Intercom</h2>
-              </div>
-              {residentProfile && (
-                <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border transition-all ${residentProfile.is_verified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                  {residentProfile.is_verified ? 'Verified' : 'Unverified'}
+          <div className="space-y-6">
+            {!requestSent ? (
+              <form onSubmit={handleRequestEntry} className="card-modern p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[4rem] space-y-6 sm:space-y-8">
+                <div className="flex justify-between items-center mb-2 sm:mb-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl">🔊</div>
+                    <h2 className="heading-lg text-lg sm:text-xl tracking-tight">Dispatch Intercom</h2>
+                  </div>
+                  {residentProfile && (
+                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border transition-all ${residentProfile.is_verified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                      {residentProfile.is_verified ? 'Verified' : 'Unverified'}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            
-            <div className="space-y-4 sm:space-y-5">
-              <div className="grid grid-cols-2 gap-4 sm:gap-5">
-                <div className="space-y-2">
-                  <label className="label-caps ml-4">Wing</label>
-                  <input required placeholder="e.g. A" className="input-modern uppercase" value={requestForm.wing} onChange={e => setRequestForm({...requestForm, wing: e.target.value})} />
+                
+                <div className="space-y-4 sm:space-y-5">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-5">
+                    <div className="space-y-2">
+                      <label className="label-caps ml-4">Wing</label>
+                      <input required placeholder="e.g. A" className="input-modern uppercase" value={requestForm.wing} onChange={e => setRequestForm({...requestForm, wing: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="label-caps ml-4">Flat Number</label>
+                      <input required placeholder="e.g. 101" className="input-modern" value={requestForm.flatNumber} onChange={e => setRequestForm({...requestForm, flatNumber: e.target.value})} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="label-caps ml-4">Guest Name</label>
+                    <input required placeholder="Full Name" className="input-modern" value={requestForm.name} onChange={e => setRequestForm({...requestForm, name: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="label-caps ml-4">Purpose</label>
+                    <input required placeholder="e.g. Delivery, Guest" className="input-modern" value={requestForm.purpose} onChange={e => setRequestForm({...requestForm, purpose: e.target.value})} />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="label-caps ml-4">Flat Number</label>
-                  <input required placeholder="e.g. 101" className="input-modern" value={requestForm.flatNumber} onChange={e => setRequestForm({...requestForm, flatNumber: e.target.value})} />
+                
+                <div className="pt-2 sm:pt-4">
+                  <button type="submit" disabled={verifying || !residentProfile?.is_verified} className={`btn-primary w-full py-5 sm:py-6 text-sm ${!residentProfile?.is_verified ? 'opacity-30 grayscale' : ''}`}>
+                    {verifying ? 'Transmitting...' : 'Send Telegram Alert'}
+                  </button>
+                  {!residentProfile && requestForm.flatNumber && (
+                    <p className="text-[9px] sm:text-[10px] text-red-500 font-black uppercase tracking-widest text-center mt-4 sm:mt-6 animate-pulse">Unit not found in directory</p>
+                  )}
+                </div>
+              </form>
+            ) : (
+              <div className="card-modern p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[4rem] text-center space-y-8 animate-in zoom-in duration-300">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto shadow-sm border border-emerald-100">📡</div>
+                <div>
+                  <h2 className="heading-lg text-xl sm:text-2xl mb-2">Alert Dispatched</h2>
+                  <p className="text-slate-500 text-sm font-medium">Telegram notification sent to resident. Waiting for digital approval.</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <button 
+                    onClick={handleCallResident}
+                    disabled={countdown > 0}
+                    className={`btn-primary w-full py-5 sm:py-6 flex items-center justify-center gap-3 ${countdown > 0 ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                  >
+                    <span className="text-xl">📞</span>
+                    <span>{countdown > 0 ? `Timer Active (${countdown}s)` : 'Call Resident Now'}</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => setRequestSent(false)}
+                    className="btn-secondary w-full py-4 sm:py-5 text-[10px] sm:text-xs"
+                  >
+                    New Request
+                  </button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="label-caps ml-4">Guest Name</label>
-                <input required placeholder="Full Name" className="input-modern" value={requestForm.name} onChange={e => setRequestForm({...requestForm, name: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="label-caps ml-4">Purpose</label>
-                <input required placeholder="e.g. Delivery, Guest" className="input-modern" value={requestForm.purpose} onChange={e => setRequestForm({...requestForm, purpose: e.target.value})} />
-              </div>
-            </div>
-            
-            <div className="pt-2 sm:pt-4">
-              <button type="submit" disabled={verifying || !residentProfile?.is_verified} className={`btn-primary w-full py-5 sm:py-6 text-sm ${!residentProfile?.is_verified ? 'opacity-30 grayscale' : ''}`}>
-                {verifying ? 'Transmitting...' : 'Send Telegram Alert'}
-              </button>
-              {!residentProfile && requestForm.flatNumber && (
-                <p className="text-[9px] sm:text-[10px] text-red-500 font-black uppercase tracking-widest text-center mt-4 sm:mt-6 animate-pulse">Unit not found in directory</p>
-              )}
-            </div>
-          </form>
+            )}
+          </div>
         )}
 
         {activeView === 'list' && (
@@ -309,6 +397,33 @@ const SecurityDashboard: React.FC<Props> = ({ buildingId, onLogout }) => {
           </div>
         )}
       </main>
+
+      {/* Decision Modal */}
+      {showDecisionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl max-w-sm w-full p-8 sm:p-12 text-center border border-slate-100 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 text-indigo-600 rounded-2xl sm:rounded-[1.5rem] flex items-center justify-center text-3xl mx-auto mb-6 sm:mb-8 shadow-sm border border-indigo-100">📞</div>
+            <h2 className="heading-lg text-xl sm:text-2xl mb-3 sm:mb-4">Call Outcome</h2>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed mb-8 sm:mb-10 font-medium">
+              The 30-second verification window has closed. What was the resident's verbal decision?
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => handleManualDecision('ENTERED')}
+                className="btn-primary bg-emerald-600 hover:bg-emerald-700 py-4"
+              >
+                Allow Entry
+              </button>
+              <button 
+                onClick={() => handleManualDecision('REJECTED')}
+                className="btn-danger py-4"
+              >
+                Deny Access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [initError, setInitError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
+    console.log('App: Fetching profile for:', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -23,6 +24,7 @@ const App: React.FC = () => {
         .maybeSingle();
 
       if (error) {
+        console.error('App: Profile fetch error:', error);
         if (error.code === '42P17') {
           throw new Error('Database Error: Infinite recursion in RLS policies. Run the fix SQL script in your Supabase editor.');
         }
@@ -30,9 +32,11 @@ const App: React.FC = () => {
       }
       
       if (!data) {
+        console.warn('App: No profile found for user');
         setProfile(null);
         await supabase.auth.signOut();
       } else {
+        console.log('App: Profile synchronized:', data.role);
         setProfile(data);
       }
     } catch (err: any) {
@@ -44,38 +48,30 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        setInitError('Identity sync timed out. Please check your connection or refresh.');
-      }
-    }, 15000); // 15 second timeout
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(timeout);
+    console.log('App: Initializing Auth...');
+    
+    // Single source of truth for Auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('App: Auth Event:', event);
       setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else setLoading(false);
-    }).catch((err) => {
-      clearTimeout(timeout);
-      console.error('Session fetch error:', err);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
+      
+      if (session) {
+        // Only fetch profile if we don't have it or if the user changed
+        if (!profile || profile.id !== session.user.id) {
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } else {
         setProfile(null);
         setLoading(false);
       }
     });
 
     return () => {
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, profile]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-6 animate-fade-in">
@@ -85,7 +81,16 @@ const App: React.FC = () => {
           <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
         </div>
       </div>
-      <p className="label-caps animate-pulse">Synchronizing Identity</p>
+      <div className="text-center space-y-2">
+        <p className="label-caps animate-pulse">Synchronizing Identity</p>
+        <p className="text-[10px] text-slate-400 font-medium">This may take a moment on slow connections</p>
+      </div>
+      <button 
+        onClick={() => window.location.reload()}
+        className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+      >
+        Tap to Refresh
+      </button>
     </div>
   );
 
@@ -127,12 +132,27 @@ const App: React.FC = () => {
     );
   }
 
+  const handleLogout = async () => {
+    console.log('App: Logging out...');
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setProfile(null);
+      // Use a standard reload to clear memory without breaking the connection
+      window.location.reload();
+    } catch (err) {
+      console.error('App: Logout error:', err);
+      window.location.reload();
+    }
+  };
+
   const renderDashboard = () => {
     switch (profile.role) {
-      case UserRole.SUPER_ADMIN: return <SuperAdminDashboard onLogout={() => supabase.auth.signOut()} />;
-      case UserRole.BUILDING_ADMIN: return <BuildingAdminDashboard buildingId={profile.building_id!} onLogout={() => supabase.auth.signOut()} />;
-      case UserRole.RESIDENT: return <ResidentDashboard profile={profile} onLogout={() => supabase.auth.signOut()} />;
-      case UserRole.SECURITY: return <SecurityDashboard buildingId={profile.building_id!} onLogout={() => supabase.auth.signOut()} />;
+      case UserRole.SUPER_ADMIN: return <SuperAdminDashboard onLogout={handleLogout} />;
+      case UserRole.BUILDING_ADMIN: return <BuildingAdminDashboard buildingId={profile.building_id!} onLogout={handleLogout} />;
+      case UserRole.RESIDENT: return <ResidentDashboard profile={profile} onLogout={handleLogout} />;
+      case UserRole.SECURITY: return <SecurityDashboard buildingId={profile.building_id!} onLogout={handleLogout} />;
       default: return <Login onLoginSuccess={fetchProfile} />;
     }
   };
